@@ -22,13 +22,17 @@ def adjacency_to_laplacian(matrix: np.ndarray) -> Matrix:
     return A
 
 
-def laplacian_to_adjacency(matrix: Matrix) -> np.ndarray:
-    return np.array(-(matrix - sp.diag(*matrix.diagonal()))).astype(np.float64)
+def laplacian_to_adjacency(matrix: Matrix) -> Matrix:
+    return -matrix + sp.diag(*matrix.diagonal())
+
+
+def sympy_to_numpy(matrix: Matrix) -> np.ndarray:
+    return np.array(matrix).astype(np.float64)
 
 
 def build_tex(L, Phi_k, Phi_gr_k, Lambda_k, F, Sp):
     result = f"""
-    A = {latex(Matrix(laplacian_to_adjacency(L)))} \\\\
+    A = {latex(laplacian_to_adjacency(L))} \\\\
     L = {latex(L)} \\\\
     \\Phi_k = {latex(Phi_k)} \\\\
     \\Phi_{{>k}} = {latex(Phi_gr_k)} \\\\
@@ -46,7 +50,7 @@ def build_tex(L, Phi_k, Phi_gr_k, Lambda_k, F, Sp):
 
 def draw_result(L, Sp):
     for i, matrix in enumerate([laplacian_to_adjacency(L)] + Sp):
-        G = nx.from_numpy_array(matrix)
+        G = nx.from_numpy_array(sympy_to_numpy(matrix))
 
         plt.figure(i)
         pos = nx.spring_layout(G)
@@ -61,9 +65,10 @@ def sparsify(
         k: int = 2,
         n: int = 10,
         trivial: bool = False,
+        return_sympy: bool = False,
         log: bool = False,
         show: bool = False
-) -> list[np.ndarray]:
+) -> list[np.ndarray] | list[Matrix]:
     """
     Performs an isospectral sparsification of a graph.
 
@@ -80,6 +85,8 @@ def sparsify(
         Number of generated sparsified graphs
     trivial : bool, optional (default=False)
         If set to True, generate trivial results with zero and identity matrices
+    return_sympy : bool, optional (default=False)
+        If set to True, return the sparsified graph as a sympy matrix
     log : bool, optional (default=False)
         If set to True, log the result to console
     show : bool, optional (default=False)
@@ -145,4 +152,7 @@ def sparsify(
     if show:
         draw_result(L, Sp)
 
-    return Sp
+    if return_sympy:
+        return Sp
+
+    return [sympy_to_numpy(x) for x in Sp]
