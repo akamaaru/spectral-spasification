@@ -7,6 +7,11 @@ import networkx as nx
 import matplotlib.pyplot as plt
 
 
+# function to reload module in iPython code
+def check():
+    return
+
+
 def norm(vector: Matrix) -> Matrix:
     return sp.sqrt(vector.dot(vector))
 
