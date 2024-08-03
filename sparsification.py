@@ -87,7 +87,7 @@ def sparsify(
     k : int, optional (default=2)
         Number of eigenvalues to be preserved from initial graph
     n : int, optional (default=10)
-        Number of generated sparsified graphs
+        Number of sparsified graphs to be generated
     trivial : bool, optional (default=False)
         If set to True, generate trivial results with zero and identity matrices
     return_sympy : bool, optional (default=False)
