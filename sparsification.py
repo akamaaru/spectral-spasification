@@ -62,6 +62,9 @@ def draw_result(L, Sp):
         nx.draw(G, pos, with_labels=True)
 
         labels = nx.get_edge_attributes(G, 'weight')
+        for key in labels.keys():
+            labels[key] = round(labels[key], 2)
+
         nx.draw_networkx_edge_labels(G, pos, edge_labels=labels)
 
 
@@ -110,7 +113,6 @@ def sparsify(
         when 'k' or 'n' are out of bounds
     """
 
-    L = Matrix()
     if isinstance(graph, str):
         data_frame = pd.read_csv(graph, sep=',', header=None)
         L = adjacency_to_laplacian(np.array(data_frame.values))
@@ -130,6 +132,9 @@ def sparsify(
     eigenvects = []
 
     for triple in L.eigenvects():
+        if not triple[0].is_real:
+            continue
+
         for vector in triple[2]:
             eigenvals.append(triple[0])
             eigenvects.append(vector)
@@ -149,7 +154,11 @@ def sparsify(
     Sp = []
     for Y in Ys:
         result = F + Phi_gr_k * Y * Phi_gr_k.T
-        Sp.append(laplacian_to_adjacency(result))
+
+        A = laplacian_to_adjacency(result)
+        # A = Matrix(A.shape[0], A.shape[1], lambda i, j: A[i, j] if A[i, j] >= 1 else 0)
+
+        Sp.append(A)
 
     if log:
         build_tex(L, Phi_k, Phi_gr_k, Lambda_k, F, Sp)
