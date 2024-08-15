@@ -72,6 +72,7 @@ def sparsify(
         graph: nx.Graph | nx.DiGraph | np.ndarray | Matrix | str,
         k: int = 2,
         n: int = 10,
+        restrictions: bool = False,
         trivial: bool = False,
         return_sympy: bool = False,
         log: bool = False,
@@ -91,6 +92,8 @@ def sparsify(
         Number of eigenvalues to be preserved from initial graph
     n : int, optional (default=10)
         Number of sparsified graphs to be generated
+    restrictions : bool, optional (default=False)
+        If set to True, equip generating algorithm with restrictions on adding new edges.
     trivial : bool, optional (default=False)
         If set to True, generate trivial results with zero and identity matrices
     return_sympy : bool, optional (default=False)
@@ -147,18 +150,46 @@ def sparsify(
     F = Phi_k * Lambda_k * Phi_k.T + eigenvals[k - 1] * Phi_gr_k * Phi_gr_k.T
 
     df = len(eigenvals) - k
-    Ys = [sp.diag(*[rd.randint(0, 10) for _ in range(df)]) for _ in range(n)] \
-        if not trivial \
-        else [sp.zeros(df), sp.eye(df)]
 
-    Sp = []
-    for Y in Ys:
+    if restrictions:
+        Y = Matrix(
+            df, df, lambda i, j: sp.Symbol(
+                f"\\lambda_{{{i + 1}{j + 1}}}" if i <= j
+                else f"\\lambda_{{{j + 1}{i + 1}}}"
+            )
+        )
+
+        symbols = set([x for x in Y])
+        Sp = []
         result = F + Phi_gr_k * Y * Phi_gr_k.T
+        result = sp.simplify(result)
+
+        equations = []
+        for i in range(len(eigenvals) - 1):
+            for j in range(i + 1, len(eigenvects)):
+                if L[i, j] == 0:
+                    equations.append(result[i, j])
+
+        solutions = sp.solve(equations, *symbols, sp.S.Reals)
+
+        Y = sp.simplify(Y.subs(solutions))
+        result = sp.simplify(result.subs(solutions))
+
+        Y = Y.subs([(symbol, 0) for symbol in symbols])
+        result = result.subs([(symbol, 0) for symbol in symbols])
 
         A = laplacian_to_adjacency(result)
-        # A = Matrix(A.shape[0], A.shape[1], lambda i, j: A[i, j] if A[i, j] >= 1 else 0)
-
         Sp.append(A)
+
+    else:
+        Ys = [sp.diag(*[rd.randint(0, 10) for _ in range(df)]) for _ in range(n)] \
+            if not trivial \
+            else [sp.zeros(df), sp.eye(df)]
+        Sp = []
+        for Y in Ys:
+            result = F + Phi_gr_k * Y * Phi_gr_k.T
+            A = laplacian_to_adjacency(result)
+            Sp.append(A)
 
     if log:
         build_tex(L, Phi_k, Phi_gr_k, Lambda_k, F, Sp)
